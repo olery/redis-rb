@@ -26,6 +26,10 @@ class Redis
     @current ||= Redis.new
   end
 
+  def self.finalize client
+    proc{ client.disconnect }
+  end
+
   include MonitorMixin
 
   # Create a new client instance
@@ -61,6 +65,7 @@ class Redis
     @cluster_mode = options.key?(:cluster)
     client = @cluster_mode ? Cluster : Client
     @original_client = @client = client.new(options)
+    ObjectSpace.define_finalizer(self, self.class.finalize(@original_client))
     @queue = Hash.new { |h, k| h[k] = [] }
 
     super() # Monitor#initialize
